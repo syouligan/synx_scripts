@@ -258,7 +258,7 @@ ggplot(data.frame(table(performanceHPtot_ranges$score)), aes(x=Var1, y=Freq)) +
   ggsave("project_results/ONT_DNA/Homopolymer_performance_element_total_frequency_total.pdf")
 
 # Plot error rate by homopolymer length
-for( i in paste0(errors, '_fraction')) {
+for( i in paste0(errors, '_freq')) {
   ggplot(data.frame(performanceHPtot_ranges@elementMetadata), ) +
     geom_boxplot(aes_string(x='score', group='score', y = i), color = "grey80") +
     geom_point(aes_string(x='score', y = i, colour = 'name')) +
@@ -270,7 +270,7 @@ for( i in paste0(errors, '_fraction')) {
 }
 
 # Error rates (all) across HP-performance units
-HP_fraction_long <- melt(data.frame(performanceHPtot_ranges@elementMetadata[,c(paste0(errors, "_fraction"), 'score')]), id = 'score')
+HP_fraction_long <- melt(data.frame(performanceHPtot_ranges@elementMetadata[,c(paste0(errors, "_freq"), 'score')]), id = 'score')
 
 ggplot(HP_fraction_long) +
   geom_boxplot(aes(x=score, y = value, colour = variable, group = score)) +

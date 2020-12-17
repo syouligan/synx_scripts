@@ -354,28 +354,30 @@ write.fasta(sequences = as.list(cn4_31mers), names = paste0('cn4_', 1:length(cn4
 cn3_sequence <- quantitative_ladder[quantitative_ladder$name == '3cn',]$SEQUENCE[1]
 cn3_31mers <- runner(x = unlist(strsplit(cn3_sequence, split="")), k = 31, f = KD_k)
 cn3_31mers <- cn3_31mers[str_length(cn3_31mers) == 31]
-write.fasta(sequences = as.list(cn3_31mers), names = paste0('cn4_', 1:length(cn3_31mers)), as.string = TRUE, file.out = 'project_results/ONT_DNA/jellyfish/cn3_31mers.fasta')
+write.fasta(sequences = as.list(cn3_31mers), names = paste0('cn3_', 1:length(cn3_31mers)), as.string = TRUE, file.out = 'project_results/ONT_DNA/jellyfish/cn3_31mers.fasta')
 
 cn2_sequence <- quantitative_ladder[quantitative_ladder$name == '2cn',]$SEQUENCE[1]
 cn2_31mers <- runner(x = unlist(strsplit(cn2_sequence, split="")), k = 31, f = KD_k)
 cn2_31mers <- cn2_31mers[str_length(cn2_31mers) == 31]
-write.fasta(sequences = as.list(cn2_31mers), names = paste0('cn4_', 1:length(cn2_31mers)), as.string = TRUE, file.out = 'project_results/ONT_DNA/jellyfish/cn2_31mers.fasta')
+write.fasta(sequences = as.list(cn2_31mers), names = paste0('cn2_', 1:length(cn2_31mers)), as.string = TRUE, file.out = 'project_results/ONT_DNA/jellyfish/cn2_31mers.fasta')
 
 cn1_sequence <- quantitative_ladder[quantitative_ladder$name == '1cn',]$SEQUENCE[1]
 cn1_31mers <- runner(x = unlist(strsplit(cn1_sequence, split="")), k = 31, f = KD_k)
 cn1_31mers <- cn1_31mers[str_length(cn1_31mers) == 31]
-write.fasta(sequences = as.list(cn1_31mers), names = paste0('cn4_', 1:length(cn1_31mers)), as.string = TRUE, file.out = 'project_results/ONT_DNA/jellyfish/cn1_31mers.fasta')
+write.fasta(sequences = as.list(cn1_31mers), names = paste0('cn1_', 1:length(cn1_31mers)), as.string = TRUE, file.out = 'project_results/ONT_DNA/jellyfish/cn1_31mers.fasta')
 
-cn1_counts <- read.table("project_results/ONT_DNA/jellyfish/cn1_31mers_counts.tsv", col.names = c("Sequence", "Counts"))
+cn1_counts <- read.table("project_results/ONT_DNA/jellyfish/1cn_31mers_counts.tsv", col.names = c("Sequence", "Counts"))
+
+cn1_counts <- cn1_counts[order(cn1_counts$Counts), ]
 cn_stats <- data.frame("cn1" = fivenum(cn1_counts$Counts))
 
-cn2_counts <- read.table("project_results/ONT_DNA/jellyfish/cn2_31mers_counts.tsv", col.names = c("Sequence", "Counts"))
+cn2_counts <- read.table("project_results/ONT_DNA/jellyfish/2cn_31mers_counts.tsv", col.names = c("Sequence", "Counts"))
 cn_stats$cn2 <- fivenum(cn2_counts$Counts)
 
-cn3_counts <- read.table("project_results/ONT_DNA/jellyfish/cn3_31mers_counts.tsv", col.names = c("Sequence", "Counts"))
+cn3_counts <- read.table("project_results/ONT_DNA/jellyfish/3cn_31mers_counts.tsv", col.names = c("Sequence", "Counts"))
 cn_stats$cn3 <- fivenum(cn3_counts$Counts)
 
-cn4_counts <- read.table("project_results/ONT_DNA/jellyfish/cn4_31mers_counts.tsv", col.names = c("Sequence", "Counts"))
+cn4_counts <- read.table("project_results/ONT_DNA/jellyfish/4cn_31mers_counts.tsv", col.names = c("Sequence", "Counts"))
 cn_stats$cn4 <- fivenum(cn4_counts$Counts)
 
 rownames(cn_stats) <- c("min", "low", "mid", "top", "max")
@@ -388,7 +390,6 @@ cn_stats$cn <- 1:4
 ggplot(cn_stats, aes(x = cn, y = mid)) +
          geom_line()
 
-
 ggplot(cn_stats, aes(x=Copy_number, ymin = min, lower = low, middle = mid, upper = top, ymax = max)) +
   geom_boxplot(stat = "identity", aes(color = Copy_number)) +
   theme_classic() +
@@ -397,12 +398,11 @@ ggplot(cn_stats, aes(x=Copy_number, ymin = min, lower = low, middle = mid, upper
   scale_color_npg(palette = c("nrc"), alpha = 1) +
   ggsave("project_results/ONT_DNA/Quantitative_ladder_counts_boxplot.pdf")
 
-
 ggplot() +
-  geom_density(data = cn1_counts, aes( x = Counts), color = npg_cols[1], fill = npg_cols[1], alpha = 0.1) +
-  geom_histogram(data = cn2_counts, aes( x = Counts), color = npg_cols[2], fill = npg_cols[2], alpha = 0.1) +
-  geom_histogram(data = cn3_counts, aes( x = Counts), color = npg_cols[3], fill = npg_cols[3], alpha = 0.1) +
-  geom_histogram(data = cn4_counts, aes( x = Counts), color = npg_cols[4], fill = npg_cols[4], alpha = 0.1) +
+  geom_histogram(data = cn1_counts, aes(x = Counts), color = npg_cols[1], fill = npg_cols[1], alpha = 0.1) +
+  geom_histogram(data = cn2_counts, aes(x = Counts), color = npg_cols[2], fill = npg_cols[2], alpha = 0.1) +
+  geom_histogram(data = cn3_counts, aes(x = Counts), color = npg_cols[3], fill = npg_cols[3], alpha = 0.1) +
+  geom_histogram(data = cn4_counts, aes(x = Counts), color = npg_cols[4], fill = npg_cols[4], alpha = 0.1) +
   theme_classic()
   theme_classic() +
   xlab("Copy number") +
@@ -410,7 +410,6 @@ ggplot() +
   scale_color_npg(palette = c("nrc"), alpha = 1) +
   ggsave("Quantitative_ladder_counts_boxplot.pdf")
 
- 
 # Homopolymer analysis
 # --------------------------------------------------------------------------
 
