@@ -225,7 +225,7 @@ for(feature in c(synx_ranges_perf$name)) {
   gt20 <- sum_stats[sum_stats$freq >= 20, 'ch']
   error_ch_time_gt20 <- error_ch_time[is.element(as.character(error_ch_time$ch), pull(gt20, ch)),]
   
-  # Plot pore performance over time for pore with >10 transcripts
+  # Plot pore performance over time for pore with >20 transcripts
   dir.create(paste0("project_results/ONT_DNA/", feature, "_perRead/Pore_over_time"))
   for(pore in unique(error_ch_time_gt20$ch)) {
     error_ch_time_pore <- error_ch_time[error_ch_time$ch == pore, ]
@@ -243,4 +243,56 @@ for(feature in c(synx_ranges_perf$name)) {
   
 }
 
+# Plot error rates for individual pores over each performance element
+# --------------------------------------------------------------------------
+
+for(feature in c(synx_ranges_perf$name, "SynX")) {
+  # Load sequencing error rates
+  reads_1linebed <- read.table(paste0("project_results/ONT_DNA/", feature, "_perRead/", feature, "_one_line.barcode06.sorted.INTERSECT.perRead.tsv"), header = TRUE, sep=";", stringsAsFactors=FALSE, quote="")
+  reads_1linebed$start_time <- as.POSIXct(reads_1linebed$start_time, format="%Y-%m-%dT%H:%M:%SZ")
+  reads_1linebed$ch <- factor(as.character(reads_1linebed$ch))
+  
+  # Plot length distribution
+  ggplot(reads_1linebed) +
+    geom_density(aes(x=Length))
+  
+  # Calculate per base error frequency
+  reads_1linebed$GC_pct <- (reads_1linebed$G + reads_1linebed$C)/reads_1linebed$Length*100
+  reads_1linebed$Error_freq <- reads_1linebed$Error/reads_1linebed$Length
+
+  # Subset to reads those around the mean (+/- 1 SD)
+  if(feature != 'SynX') {
+    feat_mean <- mean(reads_1linebed$Length)
+    feat_sd <- sd(reads_1linebed$Length)
+    reads_1linebed <- reads_1linebed[reads_1linebed$Length < (feat_mean + feat_sd) & reads_1linebed$Length > (feat_mean - feat_sd),]
+  } else {
+    print('Feature = SynX')
+  }
+  
+  # Order channels by means per base error frequency across all transcripts
+  sum_stats <- reads_1linebed %>%
+    group_by(ch) %>%
+    dplyr::summarize(Mean_error_freq = mean(Error_freq), count(ch)) %>%
+    mutate(ch = as.numeric(as.character(ch))) %>%
+    arrange(ch)
+  reads_1linebed$ch <- factor(reads_1linebed$ch, levels = sum_stats$ch)
+  
+  # Annotate with position in flow cell (row = A:G, column = 1:18)
+  
+  ONT_array <- data.frame("Pore" = 1:126)
+  idx <- match(ONT_array$Pore, as.numeric(sum_stats$ch))
+  ONT_array$ch <- sum_stats$ch [idx]
+  ONT_array$Mean_error_freq <- sum_stats$Mean_error_freq  [idx]
+  ONT_array$freq <- sum_stats$freq  [idx]
+  ONT_array$Row <- rep(LETTERS[1:7], 18)
+  ONT_array$Column <- rep(1:18, 7)
+  
+  dir.create(paste0("project_results/ONT_DNA/Error_perPore"))
+  ggplot(ONT_array, aes(x = Column, y = Row)) +
+    geom_point(aes(fill = Mean_error_freq), shape = 21, size = 6) +
+    scale_fill_gradientn(colours = hcl.colors(3, palette = 'Zissou 1', rev = FALSE), na.value = "white") +
+    theme_classic() +
+    scale_x_continuous(breaks=c(1:18)) +
+    ggsave(paste0("project_results/ONT_DNA/Error_perPore/Mean_error_rates_per_pore_", feature, ".pdf"))
+}
 

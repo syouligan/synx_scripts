@@ -53,11 +53,21 @@ synx_ranges$SEQUENCE <- synx_annotations$SEQUENCE [idx]
 # Create unique feature idenitfiers
 synx_ranges$Identifier <- paste(synx_ranges$name, synx_ranges@ranges@start, sep = '_')
 
+# Identify all 31mers in SynX sequence
+# --------------------------------------------------------------------------
+
+ONTDNA_pileup <- read.table(paste0("project_results/ONT_DNA/barcode06.sorted.bam.bed.tsv"), header = TRUE, sep="\t", stringsAsFactors=FALSE, quote="")
+
+# Calculate all unique 31mers in Synx
+KD_k <- function(x){paste(x, collapse = "")}
+synx_seq_F <- ONTDNA_pileup$REF_NT
+synx_seq_F_31mers <- runner(x = synx_seq_F, k = 31, f = KD_k)
+synx_seq_total_31mers <- synx_seq_F_31mers[str_length(synx_seq_F_31mers) == 31]
+synx_seq_total_31mers <- unique(synx_seq_total_31mers)
+write.fasta(sequences = as.list(synx_seq_total_31mers), names = synx_seq_total_31mers, as.string = TRUE, file.out = paste0('project_results/ONT_DNA/jellyfish/All_31mers.fasta'))
 
 # Identify 31mers in quantitative ladder for quantification using jellyfish
 # --------------------------------------------------------------------------
-
-# 
 quantitative_ladder <- synx_ranges[grepl('cn', synx_ranges$name), ]
 KD_k <- function(x){paste(x, collapse = "")}
 

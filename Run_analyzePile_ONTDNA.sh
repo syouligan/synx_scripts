@@ -25,6 +25,7 @@ awk '/^>/{if (NR==1) {print $0} else if (NR>1) {print "\n"$0}}; !/^>/ {printf to
 # Basewise error for each read single entry bed file (change back hardcoded analyzePile.py location, added to PATH)
 # --------------------------------------------------------------------------
 
+# For flongle
 feature_arr=(P1 P2 P3 P4 P5 P6 PH1 PH2 SynX)
 for feature in ${feature_arr[@]}; do
   mkdir /tim/mer/scott/synx/project_results/ONT_DNA/$feature'_perRead'
@@ -39,6 +40,17 @@ for feature in ${feature_arr[@]}; do
   mkdir ~/cloudstor/tim_projects/synx/project_results/ONT_DNA/$feature'_perRead'
   cp ~/Desktop/ClusterHome/synx/project_results/ONT_DNA/$feature'_perRead'/*perRead.tsv ~/cloudstor/tim_projects/synx/project_results/ONT_DNA/$feature'_perRead'
   done
+
+# For minion
+feature_arr=(P1 P2 P3 P4 P5 P6 PH1 PH2 SynX)
+for feature in ${feature_arr[@]}; do
+  mkdir /tim/mer/scott/synx/project_results/ONT_DNA_Fragmentase/$feature'_perRead'
+  samtools view -b -L /tim/mer/scott/synx/data/reference_files/$feature'_one_line'.bed /tim/mer/scott/synx/project_results/ONT_DNA_Fragmentase/ONT_DNA_Fragmentase.bam > /tim/mer/scott/synx/project_results/ONT_DNA_Fragmentase/$feature'_perRead'/$feature'_one_line'.ONT_DNA_Fragmentase.INTERSECT.bam
+  samtools index /tim/mer/scott/synx/project_results/ONT_DNA_Fragmentase/$feature'_perRead'/$feature'_one_line'.ONT_DNA_Fragmentase.INTERSECT.bam
+  python3.6 /tim/mer/scott/synx/scripts/synx/script.py /tim/mer/scott/synx/data/reference_files/synx.fa /tim/mer/scott/synx/data/ONT_DNA_Fragmentase/DNA-Fragmentase.fastq /tim/mer/scott/synx/data/reference_files/$feature'_one_line'.bed /tim/mer/scott/synx/project_results/ONT_DNA_Fragmentase/$feature'_perRead'/$feature'_one_line'.ONT_DNA_Fragmentase.INTERSECT.bam  > /tim/mer/scott/synx/project_results/ONT_DNA_Fragmentase/$feature'_perRead'/$feature'_one_line'.ONT_DNA_Fragmentase.INTERSECT.perBase.tsv
+  python3.6 /tim/mer/scott/synx/scripts/synx/merge.py /tim/mer/scott/synx/project_results/ONT_DNA_Fragmentase/$feature'_perRead'/$feature'_one_line'.ONT_DNA_Fragmentase.INTERSECT.perBase.tsv > /tim/mer/scott/synx/project_results/ONT_DNA_Fragmentase/$feature'_perRead'/$feature'_one_line'.ONT_DNA_Fragmentase.INTERSECT.perRead.tsv
+  done
+
 
 # Remove homopolymer regions from error counts for each read
 # --------------------------------------------------------------------------
@@ -128,6 +140,17 @@ for sample in ${sample_arr[@]}; do
   cp ~/Desktop/ClusterHome/synx/project_results/$sample/$sample.synx_cn_only.bam.bed.tsv ~/cloudstor/tim_projects/synx/project_results/$sample/
   done
 
+# For simulated libraries
+
+sample_arr=(Perfect Simulated)
+for sample in ${sample_arr[@]}; do
+  mkdir /tim/mer/scott/synx/project_results/ONT_DNA/NanoSim/$sample
+  minimap2 -ax map-ont -t 8 /tim/mer/scott/synx/data/reference_files/synx_cn_only.fa /tim/mer/scott/synx/project_results/ONT_DNA/NanoSim/$sample'_aligned_reads.fastq' | samtools sort - > /tim/mer/scott/synx/project_results/ONT_DNA/NanoSim/$sample/$sample.synx_cn_only.bam
+  samtools index /tim/mer/scott/synx/project_results/ONT_DNA/NanoSim/$sample/$sample.synx_cn_only.bam
+  pysamstats --fasta /tim/mer/scott/synx/data/reference_files/synx_cn_only.fa --type variation /tim/mer/scott/synx/project_results/ONT_DNA/NanoSim/$sample/$sample.synx_cn_only.bam > /tim/mer/scott/synx/project_results/ONT_DNA/NanoSim/$sample/$sample.synx_cn_only.bam.bed
+  python3 /tim/mer/scott/synx/scripts/analyzePile.py /tim/mer/scott/synx/project_results/ONT_DNA/NanoSim/$sample/$sample.synx_cn_only.bam.bed > /tim/mer/scott/synx/project_results/ONT_DNA/NanoSim/$sample/$sample.synx_cn_only.bam.bed.tsv
+  done
+
 # Calculate per read statistics for samples in sample_arr across features in feature_arr
 # --------------------------------------------------------------------------
 
@@ -181,10 +204,10 @@ for sample in ${sample_arr[@]}; do
   cp ~/Desktop/ClusterHome/synx/project_results/$sample/$sample.read_length.tsv ~/cloudstor/tim_projects/synx/project_results/$sample
   done
 
-# Assemble DCS sequence
+# Assemble DCS sequence (didnt find what this sequence was in the end...)
 # --------------------------------------------------------------------------
 
-# First establish estimated genome size and QC characteristics (flye tell N50/N90, mean depth, etc)
+# First establish estimated genome size and QC characteristics (flye tells N50/N90, mean depth, etc)
 /home/tedwon/Sources/Flye/bin/flye --nano-raw /tim/mer/scott/synx/data/ONT_DNA_DCS/ONT_DNA_Control_Strand.fastq --out-dir /tim/mer/scott/synx/project_results/ONT_DNA_DCS/assembly --threads 20 --meta
 mv /tim/mer/scott/synx/project_results/ONT_DNA_DCS/assembly/assembly.fasta /tim/mer/scott/synx/project_results/ONT_DNA_DCS/assembly/meta_assembly.fasta
 
@@ -274,10 +297,17 @@ for sample in ${sample_arr[@]}; do
   cp ~/Desktop/ClusterHome/synx/project_results/$sample/$sample.bam.bed.tsv ~/cloudstor/tim_projects/synx/project_results/$sample
   done
 
+# Simulate Synx Reads using NanoSim
+# --------------------------------------------------------------------------
 
+pip3.6 --user install six numpy HTSeq==0.9.1 Pysam scipy scikit-learn==0.20.0
+python3.6 /tim/mer/scott/synx/scripts/NanoSim3.0.0/src/read_analysis.py genome --read /tim/mer/scott/synx/data/ONT_DNA/barcode06.fastq --ref_g /tim/mer/scott/synx/data/reference_files/synx.fa --aligner minimap2 --num_threads 16 --output /tim/mer/scott/synx/project_results/ONT_DNA/NanoSim/NanoSim
 
+# With errors simulated - giving different read/quality lengths...
+python3.6 /tim/mer/scott/synx/scripts/NanoSim3.0.0/src/simulator.py genome --ref_g /tim/mer/scott/synx/data/reference_files/synx.fa --model_prefix /tim/mer/scott/synx/project_results/ONT_DNA/NanoSim/NanoSim --fastq --basecaller guppy --num_threads 16 --output /tim/mer/scott/synx/project_results/ONT_DNA/NanoSim/Simulated
 
-
+# Without error simulated
+python3.6 /tim/mer/scott/synx/scripts/NanoSim3.0.0/src/simulator.py genome --ref_g /tim/mer/scott/synx/data/reference_files/synx.fa --model_prefix /tim/mer/scott/synx/project_results/ONT_DNA/NanoSim/NanoSim --perfect --fastq --basecaller guppy --num_threads 16 --output /tim/mer/scott/synx/project_results/ONT_DNA/NanoSim/Perfect
 
   
   

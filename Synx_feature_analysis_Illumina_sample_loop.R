@@ -77,7 +77,9 @@ quantitative_ladder <- synx_ranges_by_types$Quantitative_ladder_unit
 size_ladder <- synx_ranges_by_types$Size_ladder_unit
 
 # List datasets to loop script over
-digested_data_sets <- c('ONT_DNA', 'ONT_DNA_BamHI', 'ONT_DNA_EcoRI', 'ONT_DNA_HindIII', 'ONT_DNA_Fragmentase', 'ONT_cDNA_SP6', 'ONT_cDNA_SP6_2', 'ONT_cDNA_T7', 'ONT_cDNA_T7_2', 'ONT_cDNA_SP6_3', 'ONT_cDNA_T7_3', 'ONT_RNA_SP6')
+digested_data_sets <- c('ONT_DNA_BamHI', 'ONT_DNA_EcoRI', 'ONT_DNA_HindIII', 'ONT_DNA_Fragmentase')
+digested_data_sets <- c('ONT_cDNA_SP6', 'ONT_cDNA_SP6_2', 'ONT_cDNA_T7', 'ONT_cDNA_T7_2', 'ONT_RNA_SP6')
+digested_data_sets <- c('ONT_cDNA_SP6_3', 'ONT_cDNA_T7_3')
 digested_data_sets <- c('Illumina_SP6', 'Illumina_T7')
 
 for (ds in digested_data_sets) {
@@ -85,7 +87,7 @@ for (ds in digested_data_sets) {
   # --------------------------------------------------------------------------
   
   # Load sequencing error rates
-  ONTDNA_pileup <- read.table(paste0("project_results/", ds, "/", ds, ".bam.bed.tsv"), header = TRUE, sep="\t", stringsAsFactors=FALSE, quote="")
+  ILLUMINA_pileup <- read.table(paste0("project_results/", ds, "/", ds, ".bam.bed.tsv"), header = TRUE, sep="\t", stringsAsFactors=FALSE, quote="")
   
   # Find reference mapping rates
   get_correct <- function(df){
@@ -95,9 +97,9 @@ for (ds in digested_data_sets) {
     sum(as.numeric(df[correct]))
   }
   
-  ONTDNA_pileup$Depth <- ONTDNA_pileup$Ins + ONTDNA_pileup$Del + ONTDNA_pileup$Coverage
-  ONTDNA_pileup$REF_counts <- apply(ONTDNA_pileup, 1, get_correct)
-  ONTDNA_pileup$REF_rate <- ONTDNA_pileup$REF_counts / ONTDNA_pileup$Depth
+  ILLUMINA_pileup$Depth <- ILLUMINA_pileup$Ins + ILLUMINA_pileup$Del + ILLUMINA_pileup$Coverage
+  ILLUMINA_pileup$REF_counts <- apply(ILLUMINA_pileup, 1, get_correct)
+  ILLUMINA_pileup$REF_rate <- ILLUMINA_pileup$REF_counts / ILLUMINA_pileup$Depth
   
   # Find substitution rates
   get_subs <- function(df){
@@ -107,44 +109,44 @@ for (ds in digested_data_sets) {
     sum(as.numeric(df[subs]))
   }
   
-  ONTDNA_pileup$SUB_counts <- apply(ONTDNA_pileup, 1, get_subs)
-  ONTDNA_pileup$SUB_rate <- ONTDNA_pileup$SUB_counts / ONTDNA_pileup$Depth
+  ILLUMINA_pileup$SUB_counts <- apply(ILLUMINA_pileup, 1, get_subs)
+  ILLUMINA_pileup$SUB_rate <- ILLUMINA_pileup$SUB_counts / ILLUMINA_pileup$Depth
   
   # Find INDEL rates
-  ONTDNA_pileup$Ins_rate <- ONTDNA_pileup$Ins / ONTDNA_pileup$Depth
-  ONTDNA_pileup$Del_rate <- ONTDNA_pileup$Del / ONTDNA_pileup$Depth
-  ONTDNA_pileup$INDEL_counts <- ONTDNA_pileup$Ins + ONTDNA_pileup$Del
-  ONTDNA_pileup$INDEL_rate <- ONTDNA_pileup$INDEL_counts / ONTDNA_pileup$Depth
+  ILLUMINA_pileup$Ins_rate <- ILLUMINA_pileup$Ins / ILLUMINA_pileup$Depth
+  ILLUMINA_pileup$Del_rate <- ILLUMINA_pileup$Del / ILLUMINA_pileup$Depth
+  ILLUMINA_pileup$INDEL_counts <- ILLUMINA_pileup$Ins + ILLUMINA_pileup$Del
+  ILLUMINA_pileup$INDEL_rate <- ILLUMINA_pileup$INDEL_counts / ILLUMINA_pileup$Depth
   
   # Find error rates
-  ONTDNA_pileup$Error_counts <- ONTDNA_pileup$SUB_counts + ONTDNA_pileup$INDEL_counts
-  ONTDNA_pileup$Error_rate <- ONTDNA_pileup$Error_counts / ONTDNA_pileup$Depth
+  ILLUMINA_pileup$Error_counts <- ILLUMINA_pileup$SUB_counts + ILLUMINA_pileup$INDEL_counts
+  ILLUMINA_pileup$Error_rate <- ILLUMINA_pileup$Error_counts / ILLUMINA_pileup$Depth
   
   # Plot error rates across GC performance features
   # --------------------------------------------------------------------------
   
-  performanceGC$Error_mean <- mean(extractList(ONTDNA_pileup$Error_rate, performanceGC@ranges))
-  performanceGC$Error_sd <- sd(extractList(ONTDNA_pileup$Error_rate, performanceGC@ranges))
+  performanceGC$Error_mean <- mean(extractList(ILLUMINA_pileup$Error_rate, performanceGC@ranges))
+  performanceGC$Error_sd <- sd(extractList(ILLUMINA_pileup$Error_rate, performanceGC@ranges))
   performanceGC$Error_upper <- performanceGC$Error_mean + performanceGC$Error_sd
   performanceGC$Error_lower <- performanceGC$Error_mean - performanceGC$Error_sd
   
-  performanceGC$SUB_mean <- mean(extractList(ONTDNA_pileup$SUB_rate, performanceGC@ranges))
-  performanceGC$SUB_sd <- sd(extractList(ONTDNA_pileup$SUB_rate, performanceGC@ranges))
+  performanceGC$SUB_mean <- mean(extractList(ILLUMINA_pileup$SUB_rate, performanceGC@ranges))
+  performanceGC$SUB_sd <- sd(extractList(ILLUMINA_pileup$SUB_rate, performanceGC@ranges))
   performanceGC$SUB_upper <- performanceGC$SUB_mean + performanceGC$SUB_sd
   performanceGC$SUB_lower <- performanceGC$SUB_mean - performanceGC$SUB_sd
   
-  performanceGC$INDEL_mean <- mean(extractList(ONTDNA_pileup$INDEL_rate, performanceGC@ranges))
-  performanceGC$INDEL_sd <- sd(extractList(ONTDNA_pileup$INDEL_rate, performanceGC@ranges))
+  performanceGC$INDEL_mean <- mean(extractList(ILLUMINA_pileup$INDEL_rate, performanceGC@ranges))
+  performanceGC$INDEL_sd <- sd(extractList(ILLUMINA_pileup$INDEL_rate, performanceGC@ranges))
   performanceGC$INDEL_upper <- performanceGC$INDEL_mean + performanceGC$INDEL_sd
   performanceGC$INDEL_lower <- performanceGC$INDEL_mean - performanceGC$INDEL_sd
   
-  performanceGC$INS_mean <- mean(extractList(ONTDNA_pileup$Ins_rate, performanceGC@ranges))
-  performanceGC$INS_sd <- sd(extractList(ONTDNA_pileup$Ins_rate, performanceGC@ranges))
+  performanceGC$INS_mean <- mean(extractList(ILLUMINA_pileup$Ins_rate, performanceGC@ranges))
+  performanceGC$INS_sd <- sd(extractList(ILLUMINA_pileup$Ins_rate, performanceGC@ranges))
   performanceGC$INS_upper <- performanceGC$INS_mean + performanceGC$INS_sd
   performanceGC$INS_lower <- performanceGC$INS_mean - performanceGC$INS_sd
   
-  performanceGC$DEL_mean <- mean(extractList(ONTDNA_pileup$Del_rate, performanceGC@ranges))
-  performanceGC$DEL_sd <- sd(extractList(ONTDNA_pileup$Del_rate, performanceGC@ranges))
+  performanceGC$DEL_mean <- mean(extractList(ILLUMINA_pileup$Del_rate, performanceGC@ranges))
+  performanceGC$DEL_sd <- sd(extractList(ILLUMINA_pileup$Del_rate, performanceGC@ranges))
   performanceGC$DEL_upper <- performanceGC$DEL_mean + performanceGC$DEL_sd
   performanceGC$DEL_lower <- performanceGC$DEL_mean - performanceGC$DEL_sd
   
@@ -197,33 +199,33 @@ for (ds in digested_data_sets) {
   # Import bed file of homopolymer sites
   synx_hp_ranges <- import.bed("project_results/ONT_DNA/synx_homopolymers.bed", genome = 'SynX')
   
-  synx_hp_ranges$Error_freq <- sum(extractList(ONTDNA_pileup$Error_counts, synx_hp_ranges@ranges))
-  synx_hp_ranges$Error_mean <- mean(extractList(ONTDNA_pileup$Error_rate, synx_hp_ranges@ranges))
-  synx_hp_ranges$Error_sd <- sd(extractList(ONTDNA_pileup$Error_rate, synx_hp_ranges@ranges))
+  synx_hp_ranges$Error_freq <- sum(extractList(ILLUMINA_pileup$Error_counts, synx_hp_ranges@ranges))
+  synx_hp_ranges$Error_mean <- mean(extractList(ILLUMINA_pileup$Error_rate, synx_hp_ranges@ranges))
+  synx_hp_ranges$Error_sd <- sd(extractList(ILLUMINA_pileup$Error_rate, synx_hp_ranges@ranges))
   synx_hp_ranges$Error_upper <- synx_hp_ranges$Error_mean + synx_hp_ranges$Error_sd
   synx_hp_ranges$Error_lower <- synx_hp_ranges$Error_mean - synx_hp_ranges$Error_sd
   
-  synx_hp_ranges$SUB_freq <- sum(extractList(ONTDNA_pileup$SUB_counts, synx_hp_ranges@ranges))
-  synx_hp_ranges$SUB_mean <- mean(extractList(ONTDNA_pileup$SUB_rate, synx_hp_ranges@ranges))
-  synx_hp_ranges$SUB_sd <- sd(extractList(ONTDNA_pileup$SUB_rate, synx_hp_ranges@ranges))
+  synx_hp_ranges$SUB_freq <- sum(extractList(ILLUMINA_pileup$SUB_counts, synx_hp_ranges@ranges))
+  synx_hp_ranges$SUB_mean <- mean(extractList(ILLUMINA_pileup$SUB_rate, synx_hp_ranges@ranges))
+  synx_hp_ranges$SUB_sd <- sd(extractList(ILLUMINA_pileup$SUB_rate, synx_hp_ranges@ranges))
   synx_hp_ranges$SUB_upper <- synx_hp_ranges$SUB_mean + synx_hp_ranges$SUB_sd
   synx_hp_ranges$SUB_lower <- synx_hp_ranges$SUB_mean - synx_hp_ranges$SUB_sd
   
-  synx_hp_ranges$INDEL_freq <- sum(extractList(ONTDNA_pileup$INDEL_counts, synx_hp_ranges@ranges))
-  synx_hp_ranges$INDEL_mean <- mean(extractList(ONTDNA_pileup$INDEL_rate, synx_hp_ranges@ranges))
-  synx_hp_ranges$INDEL_sd <- sd(extractList(ONTDNA_pileup$INDEL_rate, synx_hp_ranges@ranges))
+  synx_hp_ranges$INDEL_freq <- sum(extractList(ILLUMINA_pileup$INDEL_counts, synx_hp_ranges@ranges))
+  synx_hp_ranges$INDEL_mean <- mean(extractList(ILLUMINA_pileup$INDEL_rate, synx_hp_ranges@ranges))
+  synx_hp_ranges$INDEL_sd <- sd(extractList(ILLUMINA_pileup$INDEL_rate, synx_hp_ranges@ranges))
   synx_hp_ranges$INDEL_upper <- synx_hp_ranges$INDEL_mean + synx_hp_ranges$INDEL_sd
   synx_hp_ranges$INDEL_lower <- synx_hp_ranges$INDEL_mean - synx_hp_ranges$INDEL_sd
   
-  synx_hp_ranges$INS_freq <- sum(extractList(ONTDNA_pileup$Ins, synx_hp_ranges@ranges))
-  synx_hp_ranges$INS_mean <- mean(extractList(ONTDNA_pileup$Ins_rate, synx_hp_ranges@ranges))
-  synx_hp_ranges$INS_sd <- sd(extractList(ONTDNA_pileup$Ins_rate, synx_hp_ranges@ranges))
+  synx_hp_ranges$INS_freq <- sum(extractList(ILLUMINA_pileup$Ins, synx_hp_ranges@ranges))
+  synx_hp_ranges$INS_mean <- mean(extractList(ILLUMINA_pileup$Ins_rate, synx_hp_ranges@ranges))
+  synx_hp_ranges$INS_sd <- sd(extractList(ILLUMINA_pileup$Ins_rate, synx_hp_ranges@ranges))
   synx_hp_ranges$INS_upper <- synx_hp_ranges$INS_mean + synx_hp_ranges$INS_sd
   synx_hp_ranges$INS_lower <- synx_hp_ranges$INS_mean - synx_hp_ranges$INS_sd
   
-  synx_hp_ranges$DEL_freq <- sum(extractList(ONTDNA_pileup$Del, synx_hp_ranges@ranges))
-  synx_hp_ranges$DEL_mean <- mean(extractList(ONTDNA_pileup$Del_rate, synx_hp_ranges@ranges))
-  synx_hp_ranges$DEL_sd <- sd(extractList(ONTDNA_pileup$Del_rate, synx_hp_ranges@ranges))
+  synx_hp_ranges$DEL_freq <- sum(extractList(ILLUMINA_pileup$Del, synx_hp_ranges@ranges))
+  synx_hp_ranges$DEL_mean <- mean(extractList(ILLUMINA_pileup$Del_rate, synx_hp_ranges@ranges))
+  synx_hp_ranges$DEL_sd <- sd(extractList(ILLUMINA_pileup$Del_rate, synx_hp_ranges@ranges))
   synx_hp_ranges$DEL_upper <- synx_hp_ranges$DEL_mean + synx_hp_ranges$DEL_sd
   synx_hp_ranges$DEL_lower <- synx_hp_ranges$DEL_mean - synx_hp_ranges$DEL_sd
   
@@ -263,7 +265,7 @@ for (ds in digested_data_sets) {
     ggsave(paste0("project_results/", ds, "/Homopolymer_performance_element_total_frequency_total_", ds, ".pdf"))
   
   # Plot error rate by homopolymer length
-  for( i in paste0(errors, '_mean')) {
+  for( i in paste0(errors, '_freq')) {
     ggplot(data.frame(performanceHPtot_ranges@elementMetadata), ) +
       geom_boxplot(aes_string(x='score', group='score', y = i), color = "grey80") +
       geom_point(aes_string(x='score', y = i, colour = 'name')) +
@@ -275,7 +277,7 @@ for (ds in digested_data_sets) {
   }
   
   # Error rates (all) across HP-performance units
-  HP_fraction_long <- melt(data.frame(performanceHPtot_ranges@elementMetadata[,c(paste0(errors, "_mean"), 'score')]), id = 'score')
+  HP_fraction_long <- melt(data.frame(performanceHPtot_ranges@elementMetadata[,c(paste0(errors, "_freq"), 'score')]), id = 'score')
   
   ggplot(HP_fraction_long) +
     geom_boxplot(aes(x=score, y = value, colour = variable, group = score)) +
@@ -287,30 +289,4 @@ for (ds in digested_data_sets) {
     facet_wrap(~variable) +
     ggsave(paste0("project_results/", ds, "/SynX_performance_HP_all_errors_", ds, ".pdf"))
   
-  
-  # # Identify 31mers in quantitative ladder for quantification using jellyfish
-  # # --------------------------------------------------------------------------
-  # 
-  # # Import pileup stats for read data aligned to copy-number festures only
-  # ONTDNA_CN_pileup <- read.table(paste0("project_results/", ds, "/", ds, ".synx_cn_only.bam.bed.tsv"), header = TRUE, sep="\t", stringsAsFactors=FALSE, quote="")
-  # synx_cn_ranges <- import.bed("data/reference_files/synx_cn_only.bed", genome = 'SynX_cn_only')
-  # 
-  # ONTDNA_CN_pileup$Copy_number <- c(rep("cn1", synx_cn_ranges@ranges@width[1]), rep("cn2", synx_cn_ranges@ranges@width[2]), rep("cn3", synx_cn_ranges@ranges@width[3]), rep("cn4", synx_cn_ranges@ranges@width[4]))
-  # 
-  # ggplot(ONTDNA_CN_pileup) +
-  #   geom_density(aes(x = Coverage, color = Copy_number, fill = Copy_number, group = Copy_number)) +
-  #   scale_color_npg(palette = c("nrc"), alpha = 1) +
-  #   scale_fill_npg(palette = c("nrc"), alpha = 0.3) +
-  #   xlab("Copy number") +
-  #   ylab("Coverage (density)") +
-  #   theme_classic() +
-  #   ggsave(paste0("project_results/", ds, "/Quantitative_ladder_coverage_density_with_median_", ds, ".pdf"))
-  # 
-  # ggplot(ONTDNA_CN_pileup) +
-  #   geom_boxplot(aes(y = Coverage, group = Copy_number, x = Copy_number, fill = Copy_number)) +
-  #   scale_fill_npg(palette = c("nrc"), alpha = 1) +
-  #   xlab("Copy number") +
-  #   ylab("Per-base coverage") +
-  #   theme_classic() +
-    # ggsave(paste0("project_results/", ds, "/Quantitative_ladder_coverage_boxplot_", ds, ".pdf"))
 }
