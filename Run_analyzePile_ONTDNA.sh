@@ -1,5 +1,5 @@
 # --------------------------------------------------------------------------
-# Run analyzePile.py on ONT-DNA samples
+# Command line for ONT-DNA samples
 # --------------------------------------------------------------------------
 
 # Pile up per base across all reads
@@ -11,7 +11,7 @@ python3 /tim/mer/scott/synx/scripts/analyzePile.py /tim/mer/scott/synx/project_r
 # Extracts kmer sequences on forward strand
 # --------------------------------------------------------------------------
 
-python /tim/mer/scott/synx/scripts/buildKM.py /tim/mer/scott/synx/data/reference_files/synx.fa 6 > /tim/mer/scott/synx/project_results/ONT_DNA/synx_6mer.bed
+python /tim/mer/scott/synx/scripts/buildKM.py /tim/mer/scott/synx/data/reference_files/synx.fa 31 > /tim/mer/scott/synx/project_results/ONT_DNA/synx_31mer.bed
 
 # Make bed file of homopolymer sequences (from https://www.biostars.org/p/379454/)
 # --------------------------------------------------------------------------
@@ -41,16 +41,25 @@ for feature in ${feature_arr[@]}; do
   cp ~/Desktop/ClusterHome/synx/project_results/ONT_DNA/$feature'_perRead'/*perRead.tsv ~/cloudstor/tim_projects/synx/project_results/ONT_DNA/$feature'_perRead'
   done
 
-# For minion
+# For minion, subsample fragmentase library first
+seqtk sample -s100 /tim/mer/scott/synx/data/ONT_DNA_Fragmentase/DNA-Fragmentase.fastq 20000 > /tim/mer/scott/synx/data/ONT_DNA_Fragmentase/ONT_DNA_Fragmentase_20000.fastq 
+minimap2 -ax map-ont -t 8 /tim/mer/scott/synx/data/reference_files/synx.fa /tim/mer/scott/synx/data/ONT_DNA_Fragmentase/ONT_DNA_Fragmentase_20000.fastq | samtools sort - > /tim/mer/scott/synx/project_results/ONT_DNA_Fragmentase/ONT_DNA_Fragmentase_20000.bam
+samtools index /tim/mer/scott/synx/project_results/ONT_DNA_Fragmentase/ONT_DNA_Fragmentase_20000.bam
+
 feature_arr=(P1 P2 P3 P4 P5 P6 PH1 PH2 SynX)
 for feature in ${feature_arr[@]}; do
   mkdir /tim/mer/scott/synx/project_results/ONT_DNA_Fragmentase/$feature'_perRead'
-  samtools view -b -L /tim/mer/scott/synx/data/reference_files/$feature'_one_line'.bed /tim/mer/scott/synx/project_results/ONT_DNA_Fragmentase/ONT_DNA_Fragmentase.bam > /tim/mer/scott/synx/project_results/ONT_DNA_Fragmentase/$feature'_perRead'/$feature'_one_line'.ONT_DNA_Fragmentase.INTERSECT.bam
-  samtools index /tim/mer/scott/synx/project_results/ONT_DNA_Fragmentase/$feature'_perRead'/$feature'_one_line'.ONT_DNA_Fragmentase.INTERSECT.bam
-  python3.6 /tim/mer/scott/synx/scripts/synx/script.py /tim/mer/scott/synx/data/reference_files/synx.fa /tim/mer/scott/synx/data/ONT_DNA_Fragmentase/DNA-Fragmentase.fastq /tim/mer/scott/synx/data/reference_files/$feature'_one_line'.bed /tim/mer/scott/synx/project_results/ONT_DNA_Fragmentase/$feature'_perRead'/$feature'_one_line'.ONT_DNA_Fragmentase.INTERSECT.bam  > /tim/mer/scott/synx/project_results/ONT_DNA_Fragmentase/$feature'_perRead'/$feature'_one_line'.ONT_DNA_Fragmentase.INTERSECT.perBase.tsv
-  python3.6 /tim/mer/scott/synx/scripts/synx/merge.py /tim/mer/scott/synx/project_results/ONT_DNA_Fragmentase/$feature'_perRead'/$feature'_one_line'.ONT_DNA_Fragmentase.INTERSECT.perBase.tsv > /tim/mer/scott/synx/project_results/ONT_DNA_Fragmentase/$feature'_perRead'/$feature'_one_line'.ONT_DNA_Fragmentase.INTERSECT.perRead.tsv
+  samtools view -b -L /tim/mer/scott/synx/data/reference_files/$feature'_one_line'.bed /tim/mer/scott/synx/project_results/ONT_DNA_Fragmentase/ONT_DNA_Fragmentase_20000.bam > /tim/mer/scott/synx/project_results/ONT_DNA_Fragmentase/$feature'_perRead'/$feature'_one_line'.ONT_DNA_Fragmentase_20000.INTERSECT.bam
+  samtools index /tim/mer/scott/synx/project_results/ONT_DNA_Fragmentase/$feature'_perRead'/$feature'_one_line'.ONT_DNA_Fragmentase_20000.INTERSECT.bam
+  python3.6 /tim/mer/scott/synx/scripts/synx/script.py /tim/mer/scott/synx/data/reference_files/synx.fa /tim/mer/scott/synx/data/ONT_DNA_Fragmentase/'DNA-Fragmentase.fastq' /tim/mer/scott/synx/data/reference_files/$feature'_one_line'.bed /tim/mer/scott/synx/project_results/ONT_DNA_Fragmentase/$feature'_perRead'/$feature'_one_line'.ONT_DNA_Fragmentase_20000.INTERSECT.bam  > /tim/mer/scott/synx/project_results/ONT_DNA_Fragmentase/$feature'_perRead'/$feature'_one_line'.ONT_DNA_Fragmentase_20000.INTERSECT.perBase.tsv
+  python3.6 /tim/mer/scott/synx/scripts/synx/merge.py /tim/mer/scott/synx/project_results/ONT_DNA_Fragmentase/$feature'_perRead'/$feature'_one_line'.ONT_DNA_Fragmentase_20000.INTERSECT.perBase.tsv > /tim/mer/scott/synx/project_results/ONT_DNA_Fragmentase/$feature'_perRead'/$feature'_one_line'.ONT_DNA_Fragmentase_20000.INTERSECT.perRead.tsv
   done
 
+feature_arr=(P1 P2 P3 P4 P5 P6 PH1 PH2 SynX)
+for feature in ${feature_arr[@]}; do
+  mkdir ~/cloudstor/tim_projects/synx/project_results/ONT_DNA_Fragmentase/$feature'_perRead'
+  cp ~/Desktop/ClusterHome/synx/project_results/ONT_DNA_Fragmentase/$feature'_perRead'/*20000*perRead.tsv ~/cloudstor/tim_projects/synx/project_results/ONT_DNA_Fragmentase/$feature'_perRead'
+  done
 
 # Remove homopolymer regions from error counts for each read
 # --------------------------------------------------------------------------
@@ -92,32 +101,25 @@ for sample in ${sample_arr[@]}; do
   done
 
 
-# Use jelly fish to count 31mers aligning to cn ladder.
+# Use jelly fish to count 31mers aligning to cn ladder. Now redundant to R-script.
 # --------------------------------------------------------------------------
 
-sample_arr=(ONT_DNA_BamHI ONT_DNA_EcoRI ONT_DNA_Fragmentase ONT_DNA_HindIII ONT_DNA)
-sample_arr=(ONT_cDNA_SP6 ONT_cDNA_SP6_2 ONT_cDNA_T7 ONT_cDNA_T7_2 ONT_RNA_SP6)
-sample_arr=(ONT_cDNA_SP6_3 ONT_cDNA_T7_3)
+sample_arr=(ONT_DNA_BamHI ONT_DNA_EcoRI ONT_DNA_Fragmentase ONT_DNA_HindIII ONT_DNA ONT_cDNA_SP6 ONT_cDNA_SP6_2 ONT_cDNA_T7 ONT_cDNA_T7_2 ONT_RNA_SP6 ONT_cDNA_SP6_3 ONT_cDNA_T7_3)
 
 for sample in ${sample_arr[@]}; do
   mkdir /tim/mer/scott/synx/project_results/$sample/jellyfish/
   jellyfish count -m 31 -t 30 -s 100M -C /tim/mer/scott/synx/data/$sample/*.fastq -o /tim/mer/scott/synx/project_results/$sample/jellyfish/mer_counts.jf
-  cn_arr=(1cn 2cn 3cn 4cn)
-  for cn in ${cn_arr[@]}; do
-    jellyfish query -s /tim/mer/scott/synx/project_results/ONT_DNA/jellyfish/$cn'_31mers.fasta' /tim/mer/scott/synx/project_results/$sample/jellyfish/mer_counts.jf > /tim/mer/scott/synx/project_results/$sample/jellyfish/$cn'_31mers_counts.tsv'
-    done
+  jellyfish query -s /tim/mer/scott/synx/project_results/ONT_DNA/jellyfish/All_31mers.fasta /tim/mer/scott/synx/project_results/$sample/jellyfish/mer_counts.jf > /tim/mer/scott/synx/project_results/$sample/jellyfish/All_31mers_counts.tsv
   done
 
-sample_arr=(ONT_DNA_BamHI ONT_DNA_EcoRI ONT_DNA_Fragmentase ONT_DNA_HindIII ONT_DNA)
-sample_arr=(ONT_cDNA_SP6 ONT_cDNA_SP6_2 ONT_cDNA_T7 ONT_cDNA_T7_2 ONT_RNA_SP6)
-sample_arr=(ONT_cDNA_SP6_3 ONT_cDNA_T7_3)
+sample_arr=(ONT_DNA_BamHI ONT_DNA_EcoRI ONT_DNA_Fragmentase ONT_DNA_HindIII ONT_DNA ONT_cDNA_SP6 ONT_cDNA_SP6_2 ONT_cDNA_T7 ONT_cDNA_T7_2 ONT_RNA_SP6 ONT_cDNA_SP6_3 ONT_cDNA_T7_3)
 
 for sample in ${sample_arr[@]}; do
   mkdir ~/cloudstor/tim_projects/synx/project_results/$sample/jellyfish/
-  cp -f ~/Desktop/ClusterHome/synx/project_results/$sample/jellyfish/*cn_31mers_counts.tsv ~/cloudstor/tim_projects/synx/project_results/$sample/jellyfish/
+  cp -f ~/Desktop/ClusterHome/synx/project_results/$sample/jellyfish/All_31mers_counts.tsv ~/cloudstor/tim_projects/synx/project_results/$sample/jellyfish/
   done
 
-# Align to copy number information. Alternative to using jellyfish above.
+# Align to copy number information. Alternative to using jellyfish above.  Now redundant to R-script.
 # --------------------------------------------------------------------------
 
 sample_arr=(ONT_DNA_BamHI ONT_DNA_EcoRI ONT_DNA_Fragmentase ONT_DNA_HindIII)
@@ -140,16 +142,6 @@ for sample in ${sample_arr[@]}; do
   cp ~/Desktop/ClusterHome/synx/project_results/$sample/$sample.synx_cn_only.bam.bed.tsv ~/cloudstor/tim_projects/synx/project_results/$sample/
   done
 
-# For simulated libraries
-
-sample_arr=(Perfect Simulated)
-for sample in ${sample_arr[@]}; do
-  mkdir /tim/mer/scott/synx/project_results/ONT_DNA/NanoSim/$sample
-  minimap2 -ax map-ont -t 8 /tim/mer/scott/synx/data/reference_files/synx_cn_only.fa /tim/mer/scott/synx/project_results/ONT_DNA/NanoSim/$sample'_aligned_reads.fastq' | samtools sort - > /tim/mer/scott/synx/project_results/ONT_DNA/NanoSim/$sample/$sample.synx_cn_only.bam
-  samtools index /tim/mer/scott/synx/project_results/ONT_DNA/NanoSim/$sample/$sample.synx_cn_only.bam
-  pysamstats --fasta /tim/mer/scott/synx/data/reference_files/synx_cn_only.fa --type variation /tim/mer/scott/synx/project_results/ONT_DNA/NanoSim/$sample/$sample.synx_cn_only.bam > /tim/mer/scott/synx/project_results/ONT_DNA/NanoSim/$sample/$sample.synx_cn_only.bam.bed
-  python3 /tim/mer/scott/synx/scripts/analyzePile.py /tim/mer/scott/synx/project_results/ONT_DNA/NanoSim/$sample/$sample.synx_cn_only.bam.bed > /tim/mer/scott/synx/project_results/ONT_DNA/NanoSim/$sample/$sample.synx_cn_only.bam.bed.tsv
-  done
 
 # Calculate per read statistics for samples in sample_arr across features in feature_arr
 # --------------------------------------------------------------------------
@@ -309,5 +301,70 @@ python3.6 /tim/mer/scott/synx/scripts/NanoSim3.0.0/src/simulator.py genome --ref
 # Without error simulated
 python3.6 /tim/mer/scott/synx/scripts/NanoSim3.0.0/src/simulator.py genome --ref_g /tim/mer/scott/synx/data/reference_files/synx.fa --model_prefix /tim/mer/scott/synx/project_results/ONT_DNA/NanoSim/NanoSim --perfect --fastq --basecaller guppy --num_threads 16 --output /tim/mer/scott/synx/project_results/ONT_DNA/NanoSim/Perfect
 
+# Align libraries
+sample_arr=(Perfect Simulated)
+for sample in ${sample_arr[@]}; do
+  mkdir /tim/mer/scott/synx/project_results/ONT_DNA/NanoSim/$sample
+  minimap2 -ax map-ont -t 8 /tim/mer/scott/synx/data/reference_files/synx.fa /tim/mer/scott/synx/project_results/ONT_DNA/NanoSim/$sample'_aligned_reads.fastq' | samtools sort - > /tim/mer/scott/synx/project_results/ONT_DNA/NanoSim/$sample/$sample.bam
+  samtools index /tim/mer/scott/synx/project_results/ONT_DNA/NanoSim/$sample/$sample.bam
+  pysamstats --fasta /tim/mer/scott/synx/data/reference_files/synx.fa --type variation /tim/mer/scott/synx/project_results/ONT_DNA/NanoSim/$sample/$sample.bam > /tim/mer/scott/synx/project_results/ONT_DNA/NanoSim/$sample/$sample.bam.bed
+  python3 /tim/mer/scott/synx/scripts/analyzePile.py /tim/mer/scott/synx/project_results/ONT_DNA/NanoSim/$sample/$sample.bam.bed > /tim/mer/scott/synx/project_results/ONT_DNA/NanoSim/$sample/$sample.bam.bed.tsv
+done
   
-  
+# Simulate ONT reads using BadRead
+minimap2 -t 32 -c -x map-ont /tim/mer/scott/synx/data/reference_files/synx.fa /tim/mer/scott/synx/data/ONT_DNA/barcode06.fastq > /tim/mer/scott/synx/project_results/badread_simulator/alignments.paf
+python3.6 /tim/mer/scott/synx/scripts/Badread/badread-runner.py error_model --reference /tim/mer/scott/synx/data/reference_files/synx.fa --reads /tim/mer/scott/synx/data/ONT_DNA/barcode06.fastq --alignment /tim/mer/scott/synx/project_results/badread_simulator/alignments.paf > /tim/mer/scott/synx/project_results/badread_simulator/badread_errors
+python3.6 /tim/mer/scott/synx/scripts/Badread/badread-runner.py qscore_model --reference /tim/mer/scott/synx/data/reference_files/synx.fa --reads /tim/mer/scott/synx/data/ONT_DNA/barcode06.fastq --alignment /tim/mer/scott/synx/project_results/badread_simulator/alignments.paf > /tim/mer/scott/synx/project_results/badread_simulator/badread_qscores
+python3.6 /tim/mer/scott/synx/scripts/Badread/badread-runner.py simulate --quantity 14500x --reference /tim/mer/scott/synx/data/reference_files/synx.fa --error_model random \
+    --qscore_model ideal --glitches 0,0,0 --junk_reads 0 --random_reads 0 \
+    --chimeras 0 --identity 95,100,4 --start_adapter_seq "" --end_adapter_seq "" > /tim/mer/scott/synx/project_results/badread_simulator/badread_reads.fastq
+
+jellyfish count -m 31 -t 30 -s 100M -C /tim/mer/scott/synx/project_results/badread_simulator/*.fastq -o /tim/mer/scott/synx/project_results/badread_simulator/jellyfish/mer_counts.jf
+jellyfish query -s /tim/mer/scott/synx/project_results/ONT_DNA/jellyfish/All_31mers.fasta /tim/mer/scott/synx/project_results/badread_simulator/jellyfish/mer_counts.jf > /tim/mer/scott/synx/project_results/badread_simulator/jellyfish/All_31mers_counts.tsv
+
+mkdir ~/cloudstor/tim_projects/synx/project_results/badread_simulator/jellyfish/
+cp -f ~/Desktop/ClusterHome/synx/project_results/badread_simulator/jellyfish/All_31mers_counts.tsv ~/cloudstor/tim_projects/synx/project_results/badread_simulator/jellyfish/
+
+# Align ONT metagenome samples
+# --------------------------------------------------------------------------
+
+# Make genome containing SynX, Metagenome sequins, PhiX sequence
+cat /tim/mer/scott/synx/data/reference_files/Metagenome_sequin_resources/metasequin_sequences_3.0.fa /tim/mer/scott/synx/data/reference_files/synx.fa /tim/mer/scott/synx/data/reference_files/phix.fa > /tim/mer/scott/synx/data/reference_files/MetaSequin_SynX_PhiX.fa
+
+# Concatenate pass fastq files
+sample_arr=(barcode01 barcode02 barcode03 barcode04 barcode05 barcode06 barcode07 barcode08 barcode09 barcode10 barcode11 barcode12)
+for sample in ${sample_arr[@]}; do
+  mkdir /tim/mer/scott/synx/data/ONT_metagenome/$sample
+  cat /tim/mer/scott/synx/data/ONT_metagenome/GLFL278165/custom_ont_adaptor/20201130_0632_X4_FAO14644_036d5344/fastq_pass/$sample/*.fastq > /tim/mer/scott/synx/data/ONT_metagenome/$sample/$sample'_combined.fastq'
+  done
+
+cp -r barcode05 ../ONT_SeqMetGenA1
+cp -r barcode06 ../ONT_SeqMetGenB1
+cp -r barcode01 ../ONT_SeqMetGenA2
+cp -r barcode02 ../ONT_SeqMetGenA3
+cp -r barcode03 ../ONT_SeqMetGenB2
+cp -r barcode04 ../ONT_SeqMetGenB3
+
+# Align samples using minimap2
+sample_arr=(ONT_SeqMetGenA1 ONT_SeqMetGenA2 ONT_SeqMetGenA3 ONT_SeqMetGenB1 ONT_SeqMetGenB2 ONT_SeqMetGenB3)
+for sample in ${sample_arr[@]}; do
+  mkdir /tim/mer/scott/synx/project_results/$sample
+  minimap2 -ax map-ont -t 8 /tim/mer/scott/synx/data/reference_files/MetaSequin_SynX_PhiX.fa /tim/mer/scott/synx/data/$sample/*'_combined.fastq' | samtools sort - > /tim/mer/scott/synx/project_results/$sample/$sample.bam
+  samtools index /tim/mer/scott/synx/project_results/$sample/$sample.bam
+done
+
+# Quantify covergae across features using bedtools (minimum 50% overlap with feature)
+sample_arr=(ONT_SeqMetGenA1 ONT_SeqMetGenA2 ONT_SeqMetGenA3 ONT_SeqMetGenB1 ONT_SeqMetGenB2 ONT_SeqMetGenB3)
+for sample in ${sample_arr[@]}; do
+bedtools coverage -counts -f 0.5 -a /tim/mer/scott/synx/data/reference_files/MetaSequin_SynX.bed -b /tim/mer/scott/synx/project_results/$sample/$sample.bam > /tim/mer/scott/synx/project_results/$sample/$sample.MetaSequin_SynX.coverage
+done
+
+# Transfer coverage estimates to local drive
+sample_arr=(ONT_SeqMetGenA1 ONT_SeqMetGenA2 ONT_SeqMetGenA3 ONT_SeqMetGenB1 ONT_SeqMetGenB2 ONT_SeqMetGenB3)
+for sample in ${sample_arr[@]}; do
+  mkdir ~/cloudstor/tim_projects/synx/project_results/$sample
+  cp ~/Desktop/ClusterHome/synx/project_results/$sample/$sample.MetaSequin_SynX.coverage ~/cloudstor/tim_projects/synx/project_results/$sample
+  done
+
+
+

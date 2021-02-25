@@ -159,6 +159,7 @@ for (ds in data_sets) {
     xlab("Kmer") +
     ylab("Kmer Frequency (log2)") +
     theme(axis.text.x = element_blank(), axis.ticks.x = element_blank()) +
+    theme(aspect.ratio = 1) +
     ggsave(paste0("project_results/SynX_kmers/SynX_kmer_", ds,"_frequency.pdf"))
   
   # Calculate error rates across kmers
@@ -190,6 +191,7 @@ for (ds in data_sets) {
     xlab("Kmer GC content") +
     ylab("Error rate") +
     facet_wrap(~variable) +
+    theme(aspect.ratio = 1) +
     ggsave(paste0("project_results/SynX_kmers/SynX_kmer_", ds,"_error_frequency_w_GC_content.pdf"))
   
   # Plot error frequency by homopolymer length
@@ -203,6 +205,7 @@ for (ds in data_sets) {
     xlab("Kmer Homopolymer Length") +
     ylab("Error rate") +
     facet_wrap(~variable) +
+    theme(aspect.ratio = 1) +
     ggsave(paste0("project_results/SynX_kmers/SynX_kmer_", ds,"_error_frequency_w_HP_length.pdf"))
   
   # Plot error frequency by kmer
@@ -215,6 +218,7 @@ for (ds in data_sets) {
     xlab("Kmer") +
     ylab("Error rate") +
     theme(axis.text.x = element_blank(), axis.ticks.x = element_blank()) +
+    theme(aspect.ratio = 1) +
     ggsave(paste0("project_results/SynX_kmers/SynX_kmer_", ds,"_Error_frequency.pdf"))
   
   kmer_error_freq %>%
@@ -226,6 +230,7 @@ for (ds in data_sets) {
     xlab("Kmer") +
     ylab("INS rate") +
     theme(axis.text.x = element_blank(), axis.ticks.x = element_blank()) +
+    theme(aspect.ratio = 1) +
     ggsave(paste0("project_results/SynX_kmers/SynX_kmer_", ds,"_INS_frequency.pdf"))
   
   kmer_error_freq %>%
@@ -237,6 +242,7 @@ for (ds in data_sets) {
     xlab("Kmer") +
     ylab("DEL rate") +
     theme(axis.text.x = element_blank(), axis.ticks.x = element_blank()) +
+    theme(aspect.ratio = 1) +
     ggsave(paste0("project_results/SynX_kmers/SynX_kmer_", ds,"_DEL_frequency.pdf"))
   
   kmer_error_freq %>%
@@ -248,123 +254,195 @@ for (ds in data_sets) {
     xlab("Kmer") +
     ylab("SUB rate") +
     theme(axis.text.x = element_blank(), axis.ticks.x = element_blank()) +
+    theme(aspect.ratio = 1) +
     ggsave(paste0("project_results/SynX_kmers/SynX_kmer_", ds,"_SUB_frequency.pdf"))
 }
 
-# Plot error rate of individual kmers in each dataset
-# --------------------------------------------------------------------------
+# Plot kmer error distribution for ONT datasets across expressed regions
+# --------------------------------------------------
 
-for (ds in data_sets) {
-  # Load sequencing error rates
-  ONTDNA_pileup <- read.table(paste0("project_results/", ds, "/", ds, ".bam.bed.tsv"), header = TRUE, sep="\t", stringsAsFactors=FALSE, quote="")
-  
-  # Find reference mapping rates
-  get_correct <- function(df){
-    bases <- c('A', 'T', 'G', 'C')
-    ref <- df['REF_NT']
-    correct <- bases[bases == ref]
-    sum(as.numeric(df[correct]))
-  }
-  
-  ONTDNA_pileup$Depth <- ONTDNA_pileup$Ins + ONTDNA_pileup$Del + ONTDNA_pileup$Coverage
-  ONTDNA_pileup$REF_counts <- apply(ONTDNA_pileup, 1, get_correct)
-  ONTDNA_pileup$REF_rate <- ONTDNA_pileup$REF_counts / ONTDNA_pileup$Depth
-  
-  # Find substitution rates
-  get_subs <- function(df){
-    bases <- c('A', 'T', 'G', 'C')
-    ref <- df['REF_NT']
-    subs <- bases[!(bases == ref)]
-    sum(as.numeric(df[subs]))
-  }
-  
-  ONTDNA_pileup$SUB_counts <- apply(ONTDNA_pileup, 1, get_subs)
-  ONTDNA_pileup$SUB_rate <- ONTDNA_pileup$SUB_counts / ONTDNA_pileup$Depth
-  
-  # Find INDEL rates
-  ONTDNA_pileup$Ins_rate <- ONTDNA_pileup$Ins / ONTDNA_pileup$Depth
-  ONTDNA_pileup$Del_rate <- ONTDNA_pileup$Del / ONTDNA_pileup$Depth
-  ONTDNA_pileup$INDEL_counts <- ONTDNA_pileup$Ins + ONTDNA_pileup$Del
-  ONTDNA_pileup$INDEL_rate <- ONTDNA_pileup$INDEL_counts / ONTDNA_pileup$Depth
-  
-  # Find error rates
-  ONTDNA_pileup$Error_counts <- ONTDNA_pileup$SUB_counts + ONTDNA_pileup$INDEL_counts
-  ONTDNA_pileup$Error_rate <- ONTDNA_pileup$Error_counts / ONTDNA_pileup$Depth
-  
-  # Make Granges to plot single base resolution data tracks
-  pileup_ranges <- GRanges(seqnames = "SynX",
-                           ranges = IRanges(start = ONTDNA_pileup$Number, end = ONTDNA_pileup$Number, width = 1),
-                           strand = "*")
-  
-  for(col in colnames(ONTDNA_pileup)){
-    pileup_ranges@elementMetadata[,col] <- list(ONTDNA_pileup[,col])
-  }
-  
-  kmer_error_freq <- dslist2[[ds]]
-  k_total_granges <- dslist1[[ds]]
-  
-  # List kmers represented at least three times in the SynX genome
-  kmerGT2 <- kmer_error_freq[kmer_error_freq$Kmer_count > 2, ]$SEQUENCE
-  
-  # Plot kmers with mean and SD
-  for (kmer in c(kmerGT2)) {
-    dir.create(paste0('project_results/SynX_kmers/kmer_plots/', kmer))
-    KOI <- k_total_granges[k_total_granges$SEQUENCE == kmer, ]
-    
-    ggplot(data.frame(KOI@elementMetadata), aes(x=SEQUENCE, y=Error_mean, color=SEQUENCE)) +
-      stat_summary(fun.data=mean_sdl, fun.args = list(mult=1), geom="errorbar", color="black", width=0.2) +
-      stat_summary(fun=mean, geom="crossbar", color="black", width=0.4) +
-      geom_point(size = 3, alpha = 0.5) +
-      scale_color_npg(palette = c("nrc"), alpha = 1) +
-      scale_fill_npg(palette = c("nrc"), alpha = 1) +
-      ylim(0, max(k_total_granges$Error_mean)) +
-      xlab("Kmer sequence") +
-      ylab('Error rate') +
-      theme_classic() +
-      ggsave(paste0('project_results/SynX_kmers/kmer_plots/', kmer, '/Error_rates', '_', kmer, '_', ds ,'.pdf'))
-    
-    # Plot error rate of individual bases in each kmer
-    # --------------------------------------------------------------------------
-    
-    tmp_range <- k_total_granges[k_total_granges$SEQUENCE == kmer,]
-    kmer_tot_df <- data.frame()
-    for(i in 1:length(tmp_range@ranges)){
-      tmp <- tmp_range@ranges[i]
-      kmer_df <- data.frame('Error_rate' = as.numeric(ONTDNA_pileup$Error_rate[tmp@start:(tmp@start + tmp@width - 1)]))
-      kmer_df$REF_NT <- c(ONTDNA_pileup$REF_NT[tmp@start:(tmp@start + tmp@width - 1)])
-      kmer_df$Kmer_NT <- factor(paste(1:6, ONTDNA_pileup$REF_NT[tmp@start:(tmp@start + tmp@width - 1)], sep = '_'))
-      kmer_df$Occurence <- i
-      kmer_tot_df <- rbind(kmer_tot_df, kmer_df)
-      }
+# Load synx bed file
+synx_ranges <- import.bed("data/reference_files/corrected_synx_annotations.bed", genome = 'SynX')
 
-    melt(id.vars = c('Kmer_NT', 'Occurence', 'REF_NT'), data = kmer_tot_df %>% 
-           select(Kmer_NT, Error_rate, Occurence, REF_NT)) %>%
-      ggplot(aes(x=Kmer_NT, y=value, color=Kmer_NT)) +
-      geom_point(size = 3, alpha = 0.5, position = position_dodge2(w = 0.4)) +
-      stat_summary(fun.data=mean_sdl, fun.args = list(mult=1), geom="errorbar", color="black", width=0.2) +
-      stat_summary(fun=mean, geom="crossbar", color="black", width=0.4) +
-      scale_color_npg(palette = c("nrc"), alpha = 1) +
-      scale_fill_npg(palette = c("nrc"), alpha = 1) +
-      scale_x_discrete(expand=c(0.1, 0.5)) +
-      ylim(0, max(pileup_ranges$Error_rate)) +
-      xlab("Kmer sequence") +
-      ylab("Error rate") +
-      theme_classic() +
-      ggsave(paste0('project_results/SynX_kmers/kmer_plots/', kmer, '/Base_wise_error_rates_', '_', kmer, '_', ds ,'.pdf'))
-    
-    # Make kmer motif plot
-    data.frame(kmer_tot_df) %>%
-      group_by(Kmer_NT) %>%
-      select(Kmer_NT, Error_rate, Occurence , REF_NT) %>%
-      dplyr::summarize(Error_rate_mean = mean(Error_rate, na.rm = TRUE),
-                       REF_NT = unique(REF_NT)) %>%
-      ggplot(aes(x=Kmer_NT, color = REF_NT, size = Error_rate_mean, y = 1)) +
-      geom_text(aes(label = REF_NT), fontface = "bold") +
-      scale_color_npg(palette = c("nrc"), alpha = 1, guide = NULL) +
-      scale_size(range = c(3, 15), limits = c(0, 1)) +
-      xlab("Kmer sequence") +
-      theme_void() +
-      theme(panel.border = element_rect(colour = "black", fill=NA)) +
-      ggsave(paste0('project_results/SynX_kmers/kmer_plots/', kmer, '/Motif_error_rates_', '_', kmer, '_', ds ,'.pdf'))
-  }
+# Load synx feature annotations and annotate ranges
+synx_annotations <- read.table("design/custom_features.annotations.tab", header = TRUE, sep="\t",stringsAsFactors=FALSE, quote="")
+idx <- match(synx_ranges$name, synx_annotations$NAME)
+synx_ranges$TYPE <- synx_annotations$TYPE [idx]
+synx_ranges$TYPE <- gsub(" ", "_", synx_ranges$TYPE)
+synx_ranges$SEQUENCE <- synx_annotations$SEQUENCE [idx]
+
+# Subset to expressed features in SynX sequence
+synx_ranges_expressed <- synx_ranges[synx_ranges@ranges@width > 200]
+
+# List datasets to plot script over
+data_sets <- c('ONT_DNA_Fragmentase', 'ONT_cDNA_SP6', 'ONT_cDNA_T7')
+
+# Subset kmers to those expressed in SynX sequence and caluclate mean error rate per unique kmer
+dslist.names <- data_sets
+dslist3 <- vector("list", length(dslist.names))
+names(dslist3) <- dslist.names
+
+for(ds in data_sets) {
+  expressed_kmers <- subsetByOverlaps(dslist1[[ds]], synx_ranges_expressed)
+  dslist3[[ds]] <- data.frame(expressed_kmers@elementMetadata) %>%
+    group_by(SEQUENCE) %>%
+    dplyr::summarize(Kmer_count = n(),
+                     Error_rate_mean = mean(Error_mean, na.rm = TRUE),
+                     Depth = max(Depth_mean, na.rm = TRUE),
+                     Dataset = unique(ds))
 }
+
+# Create dataframe with error rates for each dataset
+kmer_exp_df <- data.frame()
+for(ds in data_sets) {
+  tmp <- data.frame(dslist3[[ds]])
+  kmer_exp_df <- rbind(kmer_exp_df, tmp)
+}
+
+# Order points based on ONT-DNA-Fragmentase
+kmer_order <- kmer_exp_df[kmer_exp_df$Dataset == 'ONT_DNA_Fragmentase',] %>%
+  arrange(desc(Error_rate_mean))
+kmer_order$SEQUENCE <- factor(kmer_order$SEQUENCE, kmer_order$SEQUENCE)
+
+# Plot distribution of kmers in each sample in datasets
+kmer_exp_df$SEQUENCE <- factor(kmer_exp_df$SEQUENCE, kmer_order$SEQUENCE)
+kmer_exp_df$Dataset <- factor(kmer_exp_df$Dataset, data_sets)
+
+ggplot(kmer_exp_df) +
+  geom_point(aes(x = SEQUENCE, y = Error_rate_mean, color = Dataset)) +
+  theme_classic() +
+  xlab("Kmer") +
+  ylab("Error rate") +
+  scale_color_npg(palette = c("nrc"), alpha = 1) +
+  theme(axis.text.x = element_blank(), axis.ticks.x = element_blank()) +
+  theme(aspect.ratio = 0.4) +
+  facet_wrap(~ Dataset, nrow = length(data_sets), ncol = 1) +
+  ggsave(paste0("project_results/SynX_kmers/SynX_kmer_ONT_sample_comparison_Error_frequency.pdf"))
+
+# Plot kmer correlation in DNA and RNA in ONT data
+SP6 <- kmer_exp_df[kmer_exp_df$Dataset == 'ONT_cDNA_SP6',]
+idx <- match(kmer_order$SEQUENCE, SP6$SEQUENCE)
+kmer_order$SP6_error <- SP6$Error_rate_mean [idx]
+mod <- lm(Error_rate_mean ~ SP6_error, kmer_order)
+eq <- paste0("y = ", format(unname(coef(mod)[1]), digits = 2), " + ", format(unname(coef(mod)[2]), digits = 2), "x")
+r2 <- paste0("r2 ", format(summary(mod)$r.squared, digits = 3))
+eq_r2 <- paste0(eq, " ", r2)
+
+ggplot(kmer_order, aes(y = Error_rate_mean, x = SP6_error)) +
+  annotate(geom = "text", y = 0.5, x = 0.1, label = eq_r2) +
+  geom_point(alpha = 0.3) +
+  geom_smooth(method='lm', se=TRUE, color = 'black') +
+  theme_classic() +
+  xlab("ONT_cDNA_SP6_error") +
+  ylab("ONT_DNA_error rate") +
+  scale_color_npg(palette = c("nrc"), alpha = 1) +
+  theme(aspect.ratio = 1) +
+  ggsave(paste0("project_results/SynX_kmers/SynX_kmer_ONT_DNA_cDNA_SP6_Error_frequency.pdf"))
+
+T7 <- kmer_exp_df[kmer_exp_df$Dataset == 'ONT_cDNA_T7',]
+idx <- match(kmer_order$SEQUENCE, T7$SEQUENCE)
+kmer_order$T7_error <- T7$Error_rate_mean [idx]
+mod <- lm(Error_rate_mean ~ T7_error, kmer_order)
+eq <- paste0("y = ", format(unname(coef(mod)[1]), digits = 2), " + ", format(unname(coef(mod)[2]), digits = 2), "x")
+r2 <- paste0("r2 ", format(summary(mod)$r.squared, digits = 3))
+eq_r2 <- paste0(eq, " ", r2)
+
+ggplot(kmer_order, aes(y = Error_rate_mean, x = T7_error)) +
+  annotate(geom = "text", y = 0.5, x = 0.1, label = eq_r2) +
+  geom_point(alpha = 0.3) +
+  geom_smooth(method='lm', se=TRUE, color = 'black') +
+  theme_classic() +
+  xlab("ONT_cDNA_T7_error") +
+  ylab("ONT_DNA_error rate") +
+  scale_color_npg(palette = c("nrc"), alpha = 1) +
+  theme(aspect.ratio = 1) +
+  ggsave(paste0("project_results/SynX_kmers/SynX_kmer_ONT_DNA_cDNA_T7_Error_frequency.pdf"))
+
+# Plot kmer error distribution for Illumina datasets across expressed regions
+# --------------------------------------------------
+
+# List datasets to plot script over
+data_sets <- c('Illumina_DNASynX', 'Illumina_SP6', 'Illumina_T7')
+
+# Subset kmers to those expressed in SynX sequence and caluclate mean error rate per unique kmer
+dslist.names <- data_sets
+dslist3 <- vector("list", length(dslist.names))
+names(dslist3) <- dslist.names
+
+for(ds in data_sets) {
+  expressed_kmers <- subsetByOverlaps(dslist1[[ds]], synx_ranges_expressed)
+  dslist3[[ds]] <- data.frame(expressed_kmers@elementMetadata) %>%
+    group_by(SEQUENCE) %>%
+    dplyr::summarize(Kmer_count = n(),
+                     Error_rate_mean = mean(Error_mean, na.rm = TRUE),
+                     Depth = max(Depth_mean, na.rm = TRUE),
+                     Dataset = unique(ds))
+}
+
+# Create dataframe with error rates for each dataset
+kmer_exp_df <- data.frame()
+for(ds in data_sets) {
+  tmp <- data.frame(dslist3[[ds]])
+  kmer_exp_df <- rbind(kmer_exp_df, tmp)
+}
+
+# Order points based on ONT-DNA-Fragmentase
+kmer_order <- kmer_exp_df[kmer_exp_df$Dataset == 'Illumina_DNASynX',] %>%
+  arrange(desc(Error_rate_mean))
+kmer_order$SEQUENCE <- factor(kmer_order$SEQUENCE, kmer_order$SEQUENCE)
+
+# Plot distribution of kmers in each sample in datasets
+kmer_exp_df$SEQUENCE <- factor(kmer_exp_df$SEQUENCE, kmer_order$SEQUENCE)
+kmer_exp_df$Dataset <- factor(kmer_exp_df$Dataset, data_sets)
+
+ggplot(kmer_exp_df) +
+  geom_point(aes(x = SEQUENCE, y = Error_rate_mean, color = Dataset)) +
+  theme_classic() +
+  xlab("Kmer") +
+  ylab("Error rate") +
+  scale_color_npg(palette = c("nrc"), alpha = 1) +
+  theme(axis.text.x = element_blank(), axis.ticks.x = element_blank()) +
+  theme(aspect.ratio = 0.4) +
+  facet_wrap(~ Dataset, nrow = length(data_sets), ncol = 1) +
+  ggsave(paste0("project_results/SynX_kmers/SynX_kmer_Illumina_sample_comparison_Error_frequency.pdf"))
+
+# Plot kmer correlation in DNA and RNA in Illumina data
+SP6 <- kmer_exp_df[kmer_exp_df$Dataset == 'Illumina_SP6',]
+idx <- match(kmer_order$SEQUENCE, SP6$SEQUENCE)
+kmer_order$SP6_error <- SP6$Error_rate_mean [idx]
+mod <- lm(Error_rate_mean ~ SP6_error, kmer_order)
+eq <- paste0("y = ", format(unname(coef(mod)[1]), digits = 2), " + ", format(unname(coef(mod)[2]), digits = 2), "x")
+r2 <- paste0("r2 ", format(summary(mod)$r.squared, digits = 3))
+eq_r2 <- paste0(eq, " ", r2)
+
+ggplot(kmer_order, aes(y = Error_rate_mean, x = SP6_error)) +
+  annotate(geom = "text", y = 0.15, x = 0.1, label = eq_r2) +
+  geom_point(alpha = 0.3) +
+  geom_smooth(method='lm', se=TRUE, color = 'black') +
+  theme_classic() +
+  xlab("Illumina_cDNA_SP6_error") +
+  ylab("Illumina_DNA_error rate") +
+  scale_color_npg(palette = c("nrc"), alpha = 1) +
+  theme(aspect.ratio = 1) +
+  ggsave(paste0("project_results/SynX_kmers/SynX_kmer_Illumina_DNA_cDNA_SP6_Error_frequency.pdf"))
+
+T7 <- kmer_exp_df[kmer_exp_df$Dataset == 'Illumina_T7',]
+idx <- match(kmer_order$SEQUENCE, T7$SEQUENCE)
+kmer_order$T7_error <- T7$Error_rate_mean [idx]
+mod <- lm(Error_rate_mean ~ T7_error, kmer_order)
+eq <- paste0("y = ", format(unname(coef(mod)[1]), digits = 2), " + ", format(unname(coef(mod)[2]), digits = 2), "x")
+r2 <- paste0("r2 ", format(summary(mod)$r.squared, digits = 3))
+eq_r2 <- paste0(eq, " ", r2)
+
+ggplot(kmer_order, aes(y = Error_rate_mean, x = T7_error)) +
+  annotate(geom = "text", y = 0.15, x = 0.1, label = eq_r2) +
+  geom_point(alpha = 0.3) +
+  geom_smooth(method='lm', se=TRUE, color = 'black') +
+  theme_classic() +
+  xlab("Illumina_cDNA_T7_error") +
+  ylab("Illumina_DNA_error rate") +
+  scale_color_npg(palette = c("nrc"), alpha = 1) +
+  theme(aspect.ratio = 1) +
+  ggsave(paste0("project_results/SynX_kmers/SynX_kmer_Illumina_DNA_cDNA_T7_Error_frequency.pdf"))
+
+
